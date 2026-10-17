@@ -3,6 +3,7 @@ import time
 import re
 import os
 import asyncio
+import uuid
 import aiohttp
 from datetime import datetime
 from typing import List, Dict, Optional
@@ -89,7 +90,7 @@ class ResearchConfig:
     top_k: float = 20
     context_length: int = 4096
     search_api_key: str = os.getenv("SERPER_API_KEY", "")
-    search_engine: str = "serper"
+    search_engine: str = os.getenv("SEARCH_ENGINE", "serper").strip().lower()
 
 
 class DeepResearchAssistant:
@@ -97,6 +98,7 @@ class DeepResearchAssistant:
         self.config = config
         self.llm = None
         self.demo_mode = False
+        self.parallel_session_id = uuid.uuid4().hex
 
     def load_model(self):
         try:
@@ -148,6 +150,11 @@ class DeepResearchAssistant:
             return f"Error generating response: {str(e)}"
 
     async def search_web(self, query: str, num_results: int = 10) -> List[Dict]:
+        if self.config.search_engine == "parallel":
+            from parallel_search import search_parallel
+            return await search_parallel(query, num_results, self.parallel_session_id)
+        if self.config.search_engine != "serper":
+            raise ValueError("SEARCH_ENGINE must be 'serper' or 'parallel'.")
         if self.config.search_api_key:
             return await self.search_serper(query, num_results)
         return []
@@ -544,8 +551,8 @@ with gr.Blocks(css=CUSTOM_CSS, title="Deep Research Assistant") as demo:
 
     gr.HTML(HEADER_HTML)
 
-    if not _assistant.config.search_api_key:
-        gr.HTML('<div style="background:linear-gradient(135deg,#ff6b00,#ff0080);color:white;padding:1rem 1.5rem;border-radius:14px;margin-bottom:1rem;">⚠️ SERPER_API_KEY not found in environment. Using fallback demo results.</div>')
+    if _assistant.config.search_engine == "serper" and not _assistant.config.search_api_key:
+        gr.HTML('<div style="background:linear-gradient(135deg,#ff6b00,#ff0080);color:white;padding:1rem 1.5rem;border-radius:14px;margin-bottom:1rem;">⚠️ Web search is disabled. Set SERPER_API_KEY or enable Parallel with SEARCH_ENGINE=parallel and its optional dependency.</div>')
 
     # ── Config section ──
     gr.Markdown("## ⚙️ Research Configuration")

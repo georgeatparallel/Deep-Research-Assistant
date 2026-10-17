@@ -1,0 +1,2 @@
+# Optional, needed only for SEARCH_ENGINE=parallel (Python 3.10+).
+mcp>=1.12,<2
