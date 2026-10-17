@@ -17,30 +17,32 @@ async def search_parallel(query: str, num_results: int, session_id: str) -> list
     if num_results <= 0:
         return []
     try:
+        import httpx
         from mcp import ClientSession
-        from mcp.client.streamable_http import streamablehttp_client
+        from mcp.client.streamable_http import streamable_http_client
     except ImportError as exc:
         raise RuntimeError(
             "Parallel search requires: pip install -r requirements-parallel.txt"
         ) from exc
 
     async def call_search():
-        async with streamablehttp_client(
-            MCP_URL,
+        async with httpx.AsyncClient(
             headers={"User-Agent": USER_AGENT},
             timeout=SEARCH_TIMEOUT,
-            sse_read_timeout=SEARCH_TIMEOUT,
-        ) as (read, write, _):
-            async with ClientSession(read, write) as session:
-                await session.initialize()
-                return await session.call_tool(
-                    "web_search",
-                    {
-                        "objective": query,
-                        "search_queries": [query],
-                        "session_id": session_id,
-                    },
-                )
+        ) as http_client:
+            async with streamable_http_client(
+                MCP_URL, http_client=http_client
+            ) as (read, write, _):
+                async with ClientSession(read, write) as session:
+                    await session.initialize()
+                    return await session.call_tool(
+                        "web_search",
+                        {
+                            "objective": query,
+                            "search_queries": [query],
+                            "session_id": session_id,
+                        },
+                    )
 
     response = await asyncio.wait_for(call_search(), timeout=SEARCH_TIMEOUT)
     if response.isError:
