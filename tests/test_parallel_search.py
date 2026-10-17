@@ -124,6 +124,21 @@ class ParallelSearchTests(unittest.IsolatedAsyncioTestCase):
         self.payload = {"results": []}
         self.assertEqual(await self.assistant.search_web("no matches"), [])
 
+    async def test_long_excerpts_stay_compact_in_research_notes(self):
+        self.payload = {"results": [
+            {"title": f"Research source {i}", "url": f"https://example.org/{i}",
+             "excerpts": ["Evidence words " * 1000, "More findings " * 1000]}
+            for i in range(20)
+        ]}
+        results = await self.assistant.search_web("research", 20)
+        self.assertEqual(len(results), 20)
+        self.assertTrue(all(len(result["snippet"]) == 300 for result in results))
+        self.assistant.generate_response = Mock(return_value="<final>INTRODUCTION\nReport.</final>")
+        self.assistant.synthesize_search("research", results, "general", "detailed")
+        prompt = self.assistant.generate_response.call_args.args[0]
+        self.assertIn("Source 20 Title:", prompt)
+        self.assertLess(len(prompt), 10000)
+
     async def test_nonpositive_result_limit_does_not_connect(self):
         self.assertEqual(await self.assistant.search_web("research", 0), [])
         self.assertEqual(await self.assistant.search_web("research", -1), [])

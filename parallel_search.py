@@ -10,6 +10,7 @@ USER_AGENT = (
     "(+https://github.com/Harshita1738/Deep-Research-Assistant)"
 )
 SEARCH_TIMEOUT = 30
+MAX_SNIPPET_CHARS = 300
 
 
 async def search_parallel(query: str, num_results: int, session_id: str) -> list[dict]:
@@ -63,7 +64,7 @@ async def search_parallel(query: str, num_results: int, session_id: str) -> list
         {
             "title": item.get("title") or "",
             "url": item["url"],
-            "snippet": "\n".join(item.get("excerpts", [])),
+            "snippet": "\n".join(item.get("excerpts", []))[:MAX_SNIPPET_CHARS],
             "source": "web",
         }
         for item in data["results"][:num_results]

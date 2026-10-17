@@ -35,7 +35,9 @@ SEARCH_ENGINE=parallel
 
 The app calls `web_search` over Streamable HTTP at `https://search.parallel.ai/mcp`.
 Result titles, URLs and excerpts flow into the existing research notes, source
-cards and JSON export. Each search has a 30-second timeout. Connection failures
+cards and JSON export. Excerpts are limited to 300 characters per source to keep
+the local model's research notes compact. Each search has a 30-second timeout.
+Connection failures
 and service errors, including rate limits, fail the research run with an error;
 the app does not silently switch providers or substitute demo sources.
 
